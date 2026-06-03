@@ -4,16 +4,29 @@ import type { DatasetSchema, InferSchemaInput } from './services/dataset/inferSc
 import type { DatasetPreview, PreviewDatasetInput } from './services/dataset/previewDataset'
 import type { QueryRequest, QueryResult } from './services/query/duckdbService'
 import type { S3ConnectionConfig } from './services/storage/s3Client'
-import type { ListObjectsInput, ListObjectsResult, StorageBucket } from './services/storage/storageService'
+import type {
+  GetObjectMetadataInput,
+  ListObjectsInput,
+  ListObjectsResult,
+  ObjectMetadata,
+  StorageBucket,
+  ValidateConnectionResult,
+} from './services/storage/storageService'
 
 const electronAPI = {
   ping: (): Promise<string> => ipcRenderer.invoke('app:ping'),
   storage: {
+    validateConnection: (connection: S3ConnectionConfig): Promise<ValidateConnectionResult> => {
+      return ipcRenderer.invoke('storage:validateConnection', connection)
+    },
     listBuckets: (connection: S3ConnectionConfig): Promise<StorageBucket[]> => {
       return ipcRenderer.invoke('storage:listBuckets', connection)
     },
     listObjects: (input: ListObjectsInput): Promise<ListObjectsResult> => {
       return ipcRenderer.invoke('storage:listObjects', input)
+    },
+    getObjectMetadata: (input: GetObjectMetadataInput): Promise<ObjectMetadata> => {
+      return ipcRenderer.invoke('storage:getObjectMetadata', input)
     },
   },
   dataset: {

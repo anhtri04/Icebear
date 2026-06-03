@@ -53,7 +53,7 @@ Renderer uses `@tailwindcss/vite` with Tailwind v4 `@import "tailwindcss"` synta
 - Keep credentials, AWS SDK/S3 clients, DuckDB, filesystem access, and other privileged work out of the renderer.
 - Add renderer-accessible functionality through preload + IPC only; keep IPC handlers small and delegate to `electron/services/*`.
 - `window.electronAPI` currently exposes `ping`, `storage`, `dataset`, and `query` namespaces.
-- Service implementations are placeholders/scaffolds until AWS SDK v3, DuckDB, parsing, caching, and credential storage are added.
+- Storage services use AWS SDK v3 for S3-compatible APIs; dataset/query services remain placeholders until parsing, DuckDB, caching, and credential storage are added.
 - **Testing:** Tests are co-located next to source files. Renderer tests use `happy-dom` environment. Tests that import `electron` (e.g. `preload.test.ts`, IPC handler tests) must mock it with `vi.mock('electron')` at file scope. Use `vi.resetModules()` + dynamic `import()` to test module init side effects (e.g. `contextBridge.exposeInMainWorld`).
 - The renderer still uses vanilla DOM manipulation (`src/counter.ts`); `src/App.tsx` exists as a placeholder for the future React UI.
 - When changing major boundaries or flow, update `ARCHITECTURE.md` as well.

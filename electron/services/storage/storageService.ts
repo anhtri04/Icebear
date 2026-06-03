@@ -1,3 +1,9 @@
+import {
+  HeadObjectCommand,
+  ListBucketsCommand,
+  ListObjectsV2Command,
+  S3ServiceException,
+} from '@aws-sdk/client-s3'
 import { createS3Client, type S3ConnectionConfig } from './s3Client'
 
 export interface StorageBucket {
@@ -28,20 +34,140 @@ export interface ListObjectsResult {
   readonly continuationToken?: string
 }
 
+export interface GetObjectMetadataInput {
+  readonly connection: S3ConnectionConfig
+  readonly bucket: string
+  readonly key: string
+}
+
+export interface ObjectMetadata extends StorageObject {
+  readonly metadata: Record<string, string>
+}
+
+export interface ValidateConnectionResult {
+  readonly ok: boolean
+  readonly message?: string
+}
+
 export class StorageService {
+  async validateConnection(connection: S3ConnectionConfig): Promise<ValidateConnectionResult> {
+    try {
+      await this.listBuckets(connection)
+      return { ok: true }
+    } catch (error) {
+      return {
+        ok: false,
+        message: normalizeStorageError(error).message,
+      }
+    }
+  }
+
   async listBuckets(connection: S3ConnectionConfig): Promise<StorageBucket[]> {
-    createS3Client(connection)
-    return []
+    try {
+      const client = createS3Client(connection)
+      const response = await client.send(new ListBucketsCommand({}))
+
+      return (response.Buckets ?? [])
+        .filter((bucket) => Boolean(bucket.Name))
+        .map((bucket) => ({
+          name: bucket.Name ?? '',
+          createdAt: bucket.CreationDate?.toISOString(),
+        }))
+    } catch (error) {
+      throw normalizeStorageError(error)
+    }
   }
 
   async listObjects(input: ListObjectsInput): Promise<ListObjectsResult> {
-    createS3Client(input.connection)
+    try {
+      const client = createS3Client(input.connection)
+      const response = await client.send(
+        new ListObjectsV2Command({
+          Bucket: input.bucket,
+          Prefix: input.prefix,
+          ContinuationToken: input.continuationToken,
+          MaxKeys: input.maxKeys ?? 1000,
+          Delimiter: '/',
+        }),
+      )
 
-    return {
-      objects: [],
-      prefixes: [],
+      return {
+        objects: (response.Contents ?? [])
+          .filter((object) => Boolean(object.Key))
+          .map((object) => ({
+            bucket: input.bucket,
+            key: object.Key ?? '',
+            size: object.Size,
+            lastModified: object.LastModified?.toISOString(),
+            etag: stripEtagQuotes(object.ETag),
+          })),
+        prefixes: (response.CommonPrefixes ?? [])
+          .map((prefix) => prefix.Prefix)
+          .filter((prefix): prefix is string => Boolean(prefix)),
+        continuationToken: response.NextContinuationToken,
+      }
+    } catch (error) {
+      throw normalizeStorageError(error)
     }
   }
+
+  async getObjectMetadata(input: GetObjectMetadataInput): Promise<ObjectMetadata> {
+    try {
+      const client = createS3Client(input.connection)
+      const response = await client.send(
+        new HeadObjectCommand({
+          Bucket: input.bucket,
+          Key: input.key,
+        }),
+      )
+
+      return {
+        bucket: input.bucket,
+        key: input.key,
+        size: response.ContentLength,
+        contentType: response.ContentType,
+        lastModified: response.LastModified?.toISOString(),
+        etag: stripEtagQuotes(response.ETag),
+        metadata: response.Metadata ?? {},
+      }
+    } catch (error) {
+      throw normalizeStorageError(error)
+    }
+  }
+}
+
+function stripEtagQuotes(etag: string | undefined): string | undefined {
+  return etag?.replace(/^"|"$/g, '')
+}
+
+function normalizeStorageError(error: unknown): Error {
+  if (error instanceof S3ServiceException) {
+    switch (error.name) {
+      case 'AccessDenied':
+      case 'InvalidAccessKeyId':
+      case 'SignatureDoesNotMatch':
+        return new Error('Unable to access object storage with the provided credentials')
+      case 'NoSuchBucket':
+        return new Error('Bucket not found')
+      case 'NoSuchKey':
+        return new Error('Object not found')
+      case 'PermanentRedirect':
+      case 'AuthorizationHeaderMalformed':
+        return new Error('Storage region or endpoint appears to be incorrect')
+      default:
+        return new Error(error.message || 'Object storage request failed')
+    }
+  }
+
+  if (error instanceof Error) {
+    if ('code' in error && error.code === 'ENOTFOUND') {
+      return new Error('Unable to reach the configured storage endpoint')
+    }
+
+    return new Error(error.message)
+  }
+
+  return new Error('Object storage request failed')
 }
 
 export const storageService = new StorageService()

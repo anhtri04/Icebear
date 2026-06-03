@@ -1,36 +1,29 @@
+import { S3Client } from '@aws-sdk/client-s3'
 import { describe, expect, it } from 'vitest'
 import { createS3Client } from './s3Client'
 
 describe('createS3Client', () => {
-  it('returns a client handle with provider and config', () => {
+  it('returns an AWS SDK S3 client', () => {
     const client = createS3Client({
       provider: 'aws',
       region: 'us-east-1',
     })
 
-    expect(client).toEqual({
-      provider: 'aws',
-      region: 'us-east-1',
-      endpoint: undefined,
-      forcePathStyle: false,
-    })
+    expect(client).toBeInstanceOf(S3Client)
   })
 
-  it('enables forcePathStyle for minio by default', () => {
-    const client = createS3Client({
-      provider: 'minio',
-      endpoint: 'http://localhost:9000',
-    })
-
-    expect(client.forcePathStyle).toBe(true)
+  it('requires endpoints for non-AWS providers', () => {
+    expect(() => createS3Client({ provider: 'minio' })).toThrow(
+      'A custom endpoint is required for this S3-compatible provider',
+    )
   })
 
-  it('uses explicit forcePathStyle when provided', () => {
-    const client = createS3Client({
-      provider: 'aws',
-      forcePathStyle: true,
-    })
-
-    expect(client.forcePathStyle).toBe(true)
+  it('requires complete static credential pairs', () => {
+    expect(() =>
+      createS3Client({
+        provider: 'aws',
+        accessKeyId: 'access-key',
+      }),
+    ).toThrow('Secret access key is required when access key ID is provided')
   })
 })

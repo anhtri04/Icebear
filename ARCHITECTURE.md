@@ -84,7 +84,7 @@ Responsibilities:
 - inspect object metadata
 - create object streams or ranged reads
 
-The initial scaffold uses provider-neutral types and placeholder behavior. AWS SDK v3 integration should be added behind this service boundary.
+The storage service uses AWS SDK v3 behind provider-neutral Icebear types. S3-compatible provider details should remain contained inside this service boundary.
 
 ### Dataset service
 
@@ -147,4 +147,4 @@ IPC handlers should be small adapters that validate inputs, call services, and r
 
 ## Current scaffold
 
-The current implementation is intentionally minimal. It establishes the folders, typed service boundaries, and IPC channel names needed for the first prototype. Real provider connectivity, file parsing, schema inference, DuckDB integration, caching, and credential storage should be implemented within these boundaries.
+The current implementation establishes the folders, typed service boundaries, and IPC channel names needed for the first prototype. Storage connectivity is implemented through AWS SDK v3 for S3-compatible APIs. Real file parsing, DuckDB integration, caching, and credential storage should be implemented within these boundaries.
