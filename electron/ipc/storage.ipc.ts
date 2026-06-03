@@ -1,18 +1,24 @@
 import { ipcMain } from 'electron'
-import type { S3ConnectionConfig } from '../services/storage/s3Client'
 import {
   storageService,
   type GetObjectMetadataInput,
+  type ListBucketsInput,
   type ListObjectsInput,
+  type ValidateConnectionConfigInput,
+  type ValidateConnectionInput,
 } from '../services/storage/storageService'
 
 export function registerStorageIpcHandlers(): void {
-  ipcMain.handle('storage:validateConnection', (_event, connection: S3ConnectionConfig) => {
-    return storageService.validateConnection(connection)
+  ipcMain.handle('storage:validateConnection', (_event, input: ValidateConnectionInput) => {
+    return storageService.validateConnection(input)
   })
 
-  ipcMain.handle('storage:listBuckets', (_event, connection: S3ConnectionConfig) => {
-    return storageService.listBuckets(connection)
+  ipcMain.handle('storage:validateConnectionConfig', (_event, input: ValidateConnectionConfigInput) => {
+    return storageService.validateConnectionConfig(input)
+  })
+
+  ipcMain.handle('storage:listBuckets', (_event, input: ListBucketsInput) => {
+    return storageService.listBuckets(input)
   })
 
   ipcMain.handle('storage:listObjects', (_event, input: ListObjectsInput) => {

@@ -4,6 +4,7 @@ import {
   ListObjectsV2Command,
   S3ServiceException,
 } from '@aws-sdk/client-s3'
+import { credentialService, type CredentialService } from '../credentials/credentialService'
 import { createS3Client, type S3ConnectionConfig } from './s3Client'
 
 export interface StorageBucket {
@@ -20,8 +21,17 @@ export interface StorageObject {
   readonly etag?: string
 }
 
-export interface ListObjectsInput {
-  readonly connection: S3ConnectionConfig
+export interface ConnectionIdInput {
+  readonly connectionId: string
+}
+
+export interface ValidateConnectionInput extends ConnectionIdInput {}
+
+export type ValidateConnectionConfigInput = S3ConnectionConfig
+
+export interface ListBucketsInput extends ConnectionIdInput {}
+
+export interface ListObjectsInput extends ConnectionIdInput {
   readonly bucket: string
   readonly prefix?: string
   readonly continuationToken?: string
@@ -34,8 +44,7 @@ export interface ListObjectsResult {
   readonly continuationToken?: string
 }
 
-export interface GetObjectMetadataInput {
-  readonly connection: S3ConnectionConfig
+export interface GetObjectMetadataInput extends ConnectionIdInput {
   readonly bucket: string
   readonly key: string
 }
@@ -49,21 +58,22 @@ export interface ValidateConnectionResult {
   readonly message?: string
 }
 
+type ConnectionResolver = Pick<CredentialService, 'resolveConnection'>
+
 export class StorageService {
-  async validateConnection(connection: S3ConnectionConfig): Promise<ValidateConnectionResult> {
-    try {
-      await this.listBuckets(connection)
-      return { ok: true }
-    } catch (error) {
-      return {
-        ok: false,
-        message: normalizeStorageError(error).message,
-      }
-    }
+  constructor(private readonly credentials: ConnectionResolver = credentialService) {}
+
+  async validateConnection(input: ValidateConnectionInput): Promise<ValidateConnectionResult> {
+    return this.validateResolvedConnection(input)
   }
 
-  async listBuckets(connection: S3ConnectionConfig): Promise<StorageBucket[]> {
+  async validateConnectionConfig(input: ValidateConnectionConfigInput): Promise<ValidateConnectionResult> {
+    return this.validateResolvedConnection(input)
+  }
+
+  async listBuckets(input: ListBucketsInput): Promise<StorageBucket[]> {
     try {
+      const connection = await this.resolveConnection(input)
       const client = createS3Client(connection)
       const response = await client.send(new ListBucketsCommand({}))
 
@@ -80,7 +90,8 @@ export class StorageService {
 
   async listObjects(input: ListObjectsInput): Promise<ListObjectsResult> {
     try {
-      const client = createS3Client(input.connection)
+      const connection = await this.resolveConnection(input)
+      const client = createS3Client(connection)
       const response = await client.send(
         new ListObjectsV2Command({
           Bucket: input.bucket,
@@ -113,7 +124,8 @@ export class StorageService {
 
   async getObjectMetadata(input: GetObjectMetadataInput): Promise<ObjectMetadata> {
     try {
-      const client = createS3Client(input.connection)
+      const connection = await this.resolveConnection(input)
+      const client = createS3Client(connection)
       const response = await client.send(
         new HeadObjectCommand({
           Bucket: input.bucket,
@@ -133,6 +145,28 @@ export class StorageService {
     } catch (error) {
       throw normalizeStorageError(error)
     }
+  }
+
+  private async validateResolvedConnection(input: ValidateConnectionInput | ValidateConnectionConfigInput): Promise<ValidateConnectionResult> {
+    try {
+      const connection = await this.resolveConnection(input)
+      const client = createS3Client(connection)
+      await client.send(new ListBucketsCommand({}))
+      return { ok: true }
+    } catch (error) {
+      return {
+        ok: false,
+        message: normalizeStorageError(error).message,
+      }
+    }
+  }
+
+  private async resolveConnection(input: ValidateConnectionInput | ValidateConnectionConfigInput): Promise<S3ConnectionConfig> {
+    if ('connectionId' in input) {
+      return this.credentials.resolveConnection(input.connectionId)
+    }
+
+    return input
   }
 }
 

@@ -33,6 +33,8 @@ describe('preload', () => {
           deleteConnection: expect.any(Function),
         }),
         storage: expect.objectContaining({
+          validateConnection: expect.any(Function),
+          validateConnectionConfig: expect.any(Function),
           listBuckets: expect.any(Function),
           listObjects: expect.any(Function),
         }),
@@ -121,6 +123,38 @@ describe('preload', () => {
     expect(mockInvoke).toHaveBeenCalledWith('credentials:deleteConnection', 'conn-1')
   })
 
+  it('storage.validateConnection delegates to ipcRenderer.invoke', async () => {
+    const mockResult = { ok: true }
+    mockInvoke.mockResolvedValue(mockResult)
+
+    await import('./preload')
+
+    const api = mockExposeInMainWorld.mock.calls[0][1] as {
+      storage: { validateConnection: (input: unknown) => Promise<unknown> }
+    }
+    const input = { connectionId: 'conn-1' }
+    const result = await api.storage.validateConnection(input)
+
+    expect(mockInvoke).toHaveBeenCalledWith('storage:validateConnection', input)
+    expect(result).toEqual(mockResult)
+  })
+
+  it('storage.validateConnectionConfig delegates to ipcRenderer.invoke', async () => {
+    const mockResult = { ok: true }
+    mockInvoke.mockResolvedValue(mockResult)
+
+    await import('./preload')
+
+    const api = mockExposeInMainWorld.mock.calls[0][1] as {
+      storage: { validateConnectionConfig: (input: unknown) => Promise<unknown> }
+    }
+    const input = { provider: 'aws' }
+    const result = await api.storage.validateConnectionConfig(input)
+
+    expect(mockInvoke).toHaveBeenCalledWith('storage:validateConnectionConfig', input)
+    expect(result).toEqual(mockResult)
+  })
+
   it('storage.listBuckets delegates to ipcRenderer.invoke', async () => {
     const mockBuckets = [{ name: 'bucket1', createdAt: '2024-01-01' }]
     mockInvoke.mockResolvedValue(mockBuckets)
@@ -129,13 +163,13 @@ describe('preload', () => {
 
     const api = mockExposeInMainWorld.mock.calls[0][1] as {
       storage: {
-        listBuckets: (connection: { provider: string }) => Promise<unknown[]>
+        listBuckets: (input: { connectionId: string }) => Promise<unknown[]>
       }
     }
-    const connection = { provider: 'aws' as const }
-    const result = await api.storage.listBuckets(connection)
+    const input = { connectionId: 'conn-1' }
+    const result = await api.storage.listBuckets(input)
 
-    expect(mockInvoke).toHaveBeenCalledWith('storage:listBuckets', connection)
+    expect(mockInvoke).toHaveBeenCalledWith('storage:listBuckets', input)
     expect(result).toEqual(mockBuckets)
   })
 
@@ -149,7 +183,7 @@ describe('preload', () => {
       storage: { listObjects: (input: unknown) => Promise<unknown> }
     }
     const input = {
-      connection: { provider: 'aws' },
+      connectionId: 'conn-1',
       bucket: 'test',
     }
     const result = await api.storage.listObjects(input)

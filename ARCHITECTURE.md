@@ -49,8 +49,10 @@ The preload exposes a narrow typed API through `contextBridge` while keeping `co
 Expected API shape:
 
 ```ts
-window.electronAPI.storage.listBuckets(...)
-window.electronAPI.storage.listObjects(...)
+window.electronAPI.storage.validateConnection({ connectionId })
+window.electronAPI.storage.validateConnectionConfig(...) // raw config for pre-save testing
+window.electronAPI.storage.listBuckets({ connectionId })
+window.electronAPI.storage.listObjects({ connectionId, bucket, prefix })
 window.electronAPI.dataset.detectFormat(...)
 window.electronAPI.dataset.inferSchema(...)
 window.electronAPI.dataset.preview(...)
@@ -91,7 +93,10 @@ Located under `electron/services/storage/`.
 
 Responsibilities:
 
+- resolve saved object storage profiles by connection ID
 - construct S3-compatible clients
+- validate saved connections by connection ID
+- validate raw pre-save connection configs
 - list buckets
 - list objects by bucket/prefix
 - inspect object metadata

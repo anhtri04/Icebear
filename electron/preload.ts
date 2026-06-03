@@ -7,13 +7,15 @@ import type { DetectDatasetFormatInput, DatasetFormat } from './services/dataset
 import type { DatasetSchema, InferSchemaInput } from './services/dataset/inferSchema'
 import type { DatasetPreview, PreviewDatasetInput } from './services/dataset/previewDataset'
 import type { QueryRequest, QueryResult } from './services/query/duckdbService'
-import type { S3ConnectionConfig } from './services/storage/s3Client'
 import type {
   GetObjectMetadataInput,
+  ListBucketsInput,
   ListObjectsInput,
   ListObjectsResult,
   ObjectMetadata,
   StorageBucket,
+  ValidateConnectionConfigInput,
+  ValidateConnectionInput,
   ValidateConnectionResult,
 } from './services/storage/storageService'
 
@@ -34,11 +36,14 @@ const electronAPI = {
     },
   },
   storage: {
-    validateConnection: (connection: S3ConnectionConfig): Promise<ValidateConnectionResult> => {
-      return ipcRenderer.invoke('storage:validateConnection', connection)
+    validateConnection: (input: ValidateConnectionInput): Promise<ValidateConnectionResult> => {
+      return ipcRenderer.invoke('storage:validateConnection', input)
     },
-    listBuckets: (connection: S3ConnectionConfig): Promise<StorageBucket[]> => {
-      return ipcRenderer.invoke('storage:listBuckets', connection)
+    validateConnectionConfig: (input: ValidateConnectionConfigInput): Promise<ValidateConnectionResult> => {
+      return ipcRenderer.invoke('storage:validateConnectionConfig', input)
+    },
+    listBuckets: (input: ListBucketsInput): Promise<StorageBucket[]> => {
+      return ipcRenderer.invoke('storage:listBuckets', input)
     },
     listObjects: (input: ListObjectsInput): Promise<ListObjectsResult> => {
       return ipcRenderer.invoke('storage:listObjects', input)

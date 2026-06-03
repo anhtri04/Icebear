@@ -23,25 +23,35 @@ vi.mock('@aws-sdk/client-s3', async (importOriginal) => {
 })
 
 import { S3ServiceException } from '@aws-sdk/client-s3'
+import { createS3Client } from './s3Client'
 import { StorageService } from './storageService'
 
 describe('StorageService', () => {
-  const service = new StorageService()
+  const mockCredentials = {
+    resolveConnection: vi.fn(),
+  }
+  const service = new StorageService(mockCredentials)
 
   beforeEach(() => {
     mockSend.mockReset()
+    mockCredentials.resolveConnection.mockReset()
+    vi.mocked(createS3Client).mockClear()
   })
 
   describe('validateConnection', () => {
-    it('returns ok when bucket listing succeeds', async () => {
+    it('supports saved connection IDs', async () => {
+      mockCredentials.resolveConnection.mockResolvedValue({ provider: 'aws' })
       mockSend.mockResolvedValue({ Buckets: [] })
 
-      const result = await service.validateConnection({ provider: 'aws' })
+      const result = await service.validateConnection({ connectionId: 'conn-1' })
 
+      expect(mockCredentials.resolveConnection).toHaveBeenCalledWith('conn-1')
+      expect(createS3Client).toHaveBeenCalledWith({ provider: 'aws' })
       expect(result).toEqual({ ok: true })
     })
 
     it('returns a sanitized message when bucket listing fails', async () => {
+      mockCredentials.resolveConnection.mockResolvedValue({ provider: 'aws' })
       mockSend.mockRejectedValue(
         new S3ServiceException({
           name: 'AccessDenied',
@@ -51,7 +61,7 @@ describe('StorageService', () => {
         }),
       )
 
-      const result = await service.validateConnection({ provider: 'aws' })
+      const result = await service.validateConnection({ connectionId: 'conn-1' })
 
       expect(result).toEqual({
         ok: false,
@@ -60,20 +70,35 @@ describe('StorageService', () => {
     })
   })
 
+  describe('validateConnectionConfig', () => {
+    it('returns ok when raw connection bucket listing succeeds', async () => {
+      mockSend.mockResolvedValue({ Buckets: [] })
+
+      const result = await service.validateConnectionConfig({ provider: 'aws' })
+
+      expect(mockCredentials.resolveConnection).not.toHaveBeenCalled()
+      expect(createS3Client).toHaveBeenCalledWith({ provider: 'aws' })
+      expect(result).toEqual({ ok: true })
+    })
+  })
+
   describe('listBuckets', () => {
-    it('normalizes S3 buckets', async () => {
+    it('normalizes S3 buckets for a saved connection', async () => {
+      mockCredentials.resolveConnection.mockResolvedValue({ provider: 'aws' })
       mockSend.mockResolvedValue({
         Buckets: [{ Name: 'bucket1', CreationDate: new Date('2024-01-01T00:00:00.000Z') }],
       })
 
-      const result = await service.listBuckets({ provider: 'aws' })
+      const result = await service.listBuckets({ connectionId: 'conn-1' })
 
+      expect(mockCredentials.resolveConnection).toHaveBeenCalledWith('conn-1')
       expect(result).toEqual([{ name: 'bucket1', createdAt: '2024-01-01T00:00:00.000Z' }])
     })
   })
 
   describe('listObjects', () => {
-    it('normalizes S3 objects and common prefixes', async () => {
+    it('normalizes S3 objects and common prefixes for a saved connection', async () => {
+      mockCredentials.resolveConnection.mockResolvedValue({ provider: 'aws' })
       mockSend.mockResolvedValue({
         Contents: [
           {
@@ -88,11 +113,12 @@ describe('StorageService', () => {
       })
 
       const result = await service.listObjects({
-        connection: { provider: 'aws' },
+        connectionId: 'conn-1',
         bucket: 'test-bucket',
         prefix: 'folder/',
       })
 
+      expect(mockCredentials.resolveConnection).toHaveBeenCalledWith('conn-1')
       expect(result).toEqual({
         objects: [
           {
@@ -110,7 +136,8 @@ describe('StorageService', () => {
   })
 
   describe('getObjectMetadata', () => {
-    it('normalizes head object metadata', async () => {
+    it('normalizes head object metadata for a saved connection', async () => {
+      mockCredentials.resolveConnection.mockResolvedValue({ provider: 'aws' })
       mockSend.mockResolvedValue({
         ContentLength: 123,
         ContentType: 'text/csv',
@@ -120,11 +147,12 @@ describe('StorageService', () => {
       })
 
       const result = await service.getObjectMetadata({
-        connection: { provider: 'aws' },
+        connectionId: 'conn-1',
         bucket: 'test-bucket',
         key: 'data.csv',
       })
 
+      expect(mockCredentials.resolveConnection).toHaveBeenCalledWith('conn-1')
       expect(result).toEqual({
         bucket: 'test-bucket',
         key: 'data.csv',
