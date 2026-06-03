@@ -24,9 +24,9 @@ React Renderer
 Electron Main Process
   -> IPC handlers
 Application Services
-  -> storage, dataset, query modules
+  -> credentials, storage, dataset, query modules
 Adapters / Engines
-  -> S3-compatible APIs, DuckDB, local cache
+  -> JSON credential store, S3-compatible APIs, DuckDB, local cache
 ```
 
 ### Renderer
@@ -63,7 +63,7 @@ The main process owns privileged operations and coordinates application services
 
 - IPC handler registration
 - provider/client construction
-- credential access
+- credential access and local credential persistence
 - cache paths
 - DuckDB orchestration
 - future worker or utility-process delegation
@@ -71,6 +71,19 @@ The main process owns privileged operations and coordinates application services
 Heavy parsing and query execution should eventually move out of the main thread into workers or Electron utility processes.
 
 ## Service layers
+
+### Credential service
+
+Located under `electron/services/credentials/`.
+
+Responsibilities:
+
+- store object storage connection profiles by ID
+- normalize provider defaults for AWS S3, Cloudflare R2, MinIO, and generic S3-compatible services
+- return redacted profiles to the renderer
+- resolve full credentials for main-process services only
+
+The current prototype stores credentials in a JSON file under Electron `userData`. Future versions should move secrets to OS-backed credential storage.
 
 ### Storage service
 

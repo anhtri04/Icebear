@@ -26,6 +26,12 @@ describe('preload', () => {
       'electronAPI',
       expect.objectContaining({
         ping: expect.any(Function),
+        credentials: expect.objectContaining({
+          listConnections: expect.any(Function),
+          getConnection: expect.any(Function),
+          saveConnection: expect.any(Function),
+          deleteConnection: expect.any(Function),
+        }),
         storage: expect.objectContaining({
           listBuckets: expect.any(Function),
           listObjects: expect.any(Function),
@@ -54,6 +60,65 @@ describe('preload', () => {
 
     expect(mockInvoke).toHaveBeenCalledWith('app:ping')
     expect(result).toBe('pong')
+  })
+
+  it('credentials.listConnections delegates to ipcRenderer.invoke', async () => {
+    const mockConnections = [{ id: 'conn-1', name: 'AWS', provider: 'aws' }]
+    mockInvoke.mockResolvedValue(mockConnections)
+
+    await import('./preload')
+
+    const api = mockExposeInMainWorld.mock.calls[0][1] as {
+      credentials: { listConnections: () => Promise<unknown[]> }
+    }
+    const result = await api.credentials.listConnections()
+
+    expect(mockInvoke).toHaveBeenCalledWith('credentials:listConnections')
+    expect(result).toEqual(mockConnections)
+  })
+
+  it('credentials.getConnection delegates to ipcRenderer.invoke', async () => {
+    const mockConnection = { id: 'conn-1', name: 'AWS', provider: 'aws' }
+    mockInvoke.mockResolvedValue(mockConnection)
+
+    await import('./preload')
+
+    const api = mockExposeInMainWorld.mock.calls[0][1] as {
+      credentials: { getConnection: (id: string) => Promise<unknown> }
+    }
+    const result = await api.credentials.getConnection('conn-1')
+
+    expect(mockInvoke).toHaveBeenCalledWith('credentials:getConnection', 'conn-1')
+    expect(result).toEqual(mockConnection)
+  })
+
+  it('credentials.saveConnection delegates to ipcRenderer.invoke', async () => {
+    const mockConnection = { id: 'conn-1', name: 'AWS', provider: 'aws' }
+    mockInvoke.mockResolvedValue(mockConnection)
+
+    await import('./preload')
+
+    const api = mockExposeInMainWorld.mock.calls[0][1] as {
+      credentials: { saveConnection: (input: unknown) => Promise<unknown> }
+    }
+    const input = { name: 'AWS', provider: 'aws' }
+    const result = await api.credentials.saveConnection(input)
+
+    expect(mockInvoke).toHaveBeenCalledWith('credentials:saveConnection', input)
+    expect(result).toEqual(mockConnection)
+  })
+
+  it('credentials.deleteConnection delegates to ipcRenderer.invoke', async () => {
+    mockInvoke.mockResolvedValue(undefined)
+
+    await import('./preload')
+
+    const api = mockExposeInMainWorld.mock.calls[0][1] as {
+      credentials: { deleteConnection: (id: string) => Promise<void> }
+    }
+    await api.credentials.deleteConnection('conn-1')
+
+    expect(mockInvoke).toHaveBeenCalledWith('credentials:deleteConnection', 'conn-1')
   })
 
   it('storage.listBuckets delegates to ipcRenderer.invoke', async () => {

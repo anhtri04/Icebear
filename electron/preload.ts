@@ -1,4 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type {
+  RedactedObjectStorageConnection,
+  SaveObjectStorageConnectionInput,
+} from './services/credentials/credentialService'
 import type { DetectDatasetFormatInput, DatasetFormat } from './services/dataset/detectFormat'
 import type { DatasetSchema, InferSchemaInput } from './services/dataset/inferSchema'
 import type { DatasetPreview, PreviewDatasetInput } from './services/dataset/previewDataset'
@@ -15,6 +19,20 @@ import type {
 
 const electronAPI = {
   ping: (): Promise<string> => ipcRenderer.invoke('app:ping'),
+  credentials: {
+    listConnections: (): Promise<RedactedObjectStorageConnection[]> => {
+      return ipcRenderer.invoke('credentials:listConnections')
+    },
+    getConnection: (id: string): Promise<RedactedObjectStorageConnection> => {
+      return ipcRenderer.invoke('credentials:getConnection', id)
+    },
+    saveConnection: (input: SaveObjectStorageConnectionInput): Promise<RedactedObjectStorageConnection> => {
+      return ipcRenderer.invoke('credentials:saveConnection', input)
+    },
+    deleteConnection: (id: string): Promise<void> => {
+      return ipcRenderer.invoke('credentials:deleteConnection', id)
+    },
+  },
   storage: {
     validateConnection: (connection: S3ConnectionConfig): Promise<ValidateConnectionResult> => {
       return ipcRenderer.invoke('storage:validateConnection', connection)
