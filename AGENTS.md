@@ -1,7 +1,7 @@
 # Icebear — Agent Guide
 
 **Stack:** Electron + React + TypeScript + Vite (`electron-vite`) + Tailwind CSS v4  
-**Phase:** Design / prototype — the renderer is still a Vite boilerplate counter app.
+**Phase:** Design / prototype — architecture/service boundaries are scaffolded, while the renderer UI is still mostly the Vite boilerplate counter app.
 
 ## Entrypoints (the 3 `electron-vite` targets)
 
@@ -16,31 +16,50 @@ Renderer uses `@tailwindcss/vite` with Tailwind v4 `@import "tailwindcss"` synta
 
 ## Commands
 
-| Command             | What it does                                    |
-|---------------------|-------------------------------------------------|
-| `npm run dev`       | Dev server with HMR                             |
-| `npm run build`     | `tsc --noEmit` (typecheck) then `electron-vite build` |
-| `npm run preview`   | Preview a production build                      |
+| Command               | What it does                                          |
+|-----------------------|-------------------------------------------------------|
+| `npm run dev`         | Dev server with HMR                                   |
+| `npm run build`       | `tsc --noEmit` (typecheck) then `electron-vite build` |
+| `npm run preview`     | Preview a production build                            |
+| `npm run test`        | `vitest run` (single run)                             |
+| `npm run test:watch`  | `vitest` (watch mode)                                 |
+| `npm run test:coverage` | `vitest run --coverage`                             |
 
 `build` always runs `tsc --noEmit` first. If type errors fail the build, the actual `electron-vite build` never runs.
 
 ## Project structure
 
-- `electron/` — main process + IPC handlers. `electron/ipc/index.ts` has `registerIpcHandlers()`.
-- `electron/preload.ts` — exposes `window.electronAPI` via `contextBridge` (single `app:ping` handler).
+- `ARCHITECTURE.md` — project architecture, runtime boundaries, service responsibilities, and security/performance principles.
+- `electron/` — main process, preload, IPC handlers, and privileged services.
+- `electron/ipc/index.ts` — central `registerIpcHandlers()` entrypoint.
+- `electron/ipc/storage.ipc.ts` — storage IPC channels.
+- `electron/ipc/dataset.ipc.ts` — dataset detection/schema/preview IPC channels.
+- `electron/ipc/query.ipc.ts` — query IPC channels.
+- `electron/services/storage/` — S3-compatible storage client/service boundary.
+- `electron/services/dataset/` — dataset format detection, schema inference, and preview boundary.
+- `electron/services/query/` — DuckDB query service boundary.
+- `electron/preload.ts` — exposes typed `window.electronAPI` via `contextBridge`.
 - `src/` — renderer (React/TS). `src/main.ts` is the renderer entry.
+- `src/App.tsx` — placeholder React app component.
+- `src/features/` — renderer feature folders: `connections`, `object-browser`, `dataset-preview`, and `query-editor`.
 - `src/vite-env.d.ts` — types `window.electronAPI` with the preload's `ElectronAPI` type.
+- `vitest.config.ts` — vitest config with 2 projects: `main` (node env, `electron/**/*.test.ts`) and `renderer` (happy-dom env, `src/**/*.test.{ts,tsx}`).
 - `public/` — static assets (`favicon.svg`, `icons.svg`).
 
 ## Architecture notes
 
 - **contextIsolation: true** + **nodeIntegration: false** + **sandbox: false** — standard Electron security.
 - IPC handler registration (`registerIpcHandlers`) is called once in `electron/main.ts`'s `app.whenReady`.
-- The renderer currently has zero React components — it uses vanilla DOM manipulation (`src/counter.ts`).
+- Keep credentials, AWS SDK/S3 clients, DuckDB, filesystem access, and other privileged work out of the renderer.
+- Add renderer-accessible functionality through preload + IPC only; keep IPC handlers small and delegate to `electron/services/*`.
+- `window.electronAPI` currently exposes `ping`, `storage`, `dataset`, and `query` namespaces.
+- Service implementations are placeholders/scaffolds until AWS SDK v3, DuckDB, parsing, caching, and credential storage are added.
+- **Testing:** Tests are co-located next to source files. Renderer tests use `happy-dom` environment. Tests that import `electron` (e.g. `preload.test.ts`, IPC handler tests) must mock it with `vi.mock('electron')` at file scope. Use `vi.resetModules()` + dynamic `import()` to test module init side effects (e.g. `contextBridge.exposeInMainWorld`).
+- The renderer still uses vanilla DOM manipulation (`src/counter.ts`); `src/App.tsx` exists as a placeholder for the future React UI.
+- When changing major boundaries or flow, update `ARCHITECTURE.md` as well.
 
 ## What's missing (not configured)
 
-- No test framework (no `vitest`, jest, playwright, etc.)
 - No lint runner beyond `tsc` (no eslint, prettier)
 - No CI workflows
 - No pre-commit hooks
