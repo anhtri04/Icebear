@@ -1,49 +1,28 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useReducer, useRef } from 'react'
 import { AppShell } from './components/AppShell'
 import type { SaveObjectStorageConnectionInput } from '../electron/services/credentials/credentialService'
-import type { AppState } from './appTypes'
+import { appReducer } from './app/appReducer'
+import { initialState } from './app/appState'
 import { objectListNodeId, objectNodeId } from './appTypes'
 
-const initialState: AppState = {
-  connections: [],
-  bucketsByConnectionId: {},
-  objectsByBucketId: {},
-  objectMetadataById: {},
-  selection: { type: 'none' },
-  isLoadingConnections: true,
-  loadingBucketConnectionIds: [],
-  loadingObjectBucketIds: [],
-  loadingObjectMetadataIds: [],
-  errorsByNodeId: {},
-  isConnectionModalOpen: false,
-}
-
 export function App() {
-  const [state, setReactState] = useState<AppState>(initialState)
+  const [state, dispatch] = useReducer(appReducer, initialState)
   const stateRef = useRef(state)
-
-  const setState = useCallback((updater: (current: AppState) => AppState): void => {
-    setReactState((current) => updater(current))
-  }, [])
 
   useEffect(() => {
     stateRef.current = state
   }, [state])
 
   const loadConnections = useCallback(async (): Promise<void> => {
-    setState((current) => ({ ...current, isLoadingConnections: true }))
+    dispatch({ type: 'connections/loadStarted' })
 
     try {
       const connections = await window.electronAPI.credentials.listConnections()
-      setState((current) => ({ ...current, connections, isLoadingConnections: false }))
+      dispatch({ type: 'connections/loadSucceeded', connections })
     } catch (error) {
-      setState((current) => ({
-        ...current,
-        isLoadingConnections: false,
-        statusMessage: errorMessage(error, 'Unable to load connections'),
-      }))
+      dispatch({ type: 'connections/loadFailed', message: errorMessage(error, 'Unable to load connections') })
     }
-  }, [setState])
+  }, [])
 
   const loadBuckets = useCallback(
     async (connectionId: string): Promise<void> => {
@@ -51,30 +30,16 @@ export function App() {
         return
       }
 
-      setState((current) => ({
-        ...current,
-        loadingBucketConnectionIds: current.loadingBucketConnectionIds.includes(connectionId)
-          ? current.loadingBucketConnectionIds
-          : [...current.loadingBucketConnectionIds, connectionId],
-        errorsByNodeId: { ...current.errorsByNodeId, [connectionId]: '' },
-      }))
+      dispatch({ type: 'buckets/loadStarted', connectionId })
 
       try {
         const buckets = await window.electronAPI.storage.listBuckets({ connectionId })
-        setState((current) => ({
-          ...current,
-          bucketsByConnectionId: { ...current.bucketsByConnectionId, [connectionId]: buckets },
-          loadingBucketConnectionIds: current.loadingBucketConnectionIds.filter((id) => id !== connectionId),
-        }))
+        dispatch({ type: 'buckets/loadSucceeded', connectionId, buckets })
       } catch (error) {
-        setState((current) => ({
-          ...current,
-          loadingBucketConnectionIds: current.loadingBucketConnectionIds.filter((id) => id !== connectionId),
-          errorsByNodeId: { ...current.errorsByNodeId, [connectionId]: errorMessage(error, 'Unable to list buckets') },
-        }))
+        dispatch({ type: 'buckets/loadFailed', connectionId, message: errorMessage(error, 'Unable to list buckets') })
       }
     },
-    [setState],
+    [],
   )
 
   const loadObjects = useCallback(
@@ -85,28 +50,16 @@ export function App() {
         return
       }
 
-      setState((current) => ({
-        ...current,
-        loadingObjectBucketIds: current.loadingObjectBucketIds.includes(id) ? current.loadingObjectBucketIds : [...current.loadingObjectBucketIds, id],
-        errorsByNodeId: { ...current.errorsByNodeId, [id]: '' },
-      }))
+      dispatch({ type: 'objects/loadStarted', id })
 
       try {
         const result = await window.electronAPI.storage.listObjects({ connectionId, bucket, prefix })
-        setState((current) => ({
-          ...current,
-          objectsByBucketId: { ...current.objectsByBucketId, [id]: result },
-          loadingObjectBucketIds: current.loadingObjectBucketIds.filter((item) => item !== id),
-        }))
+        dispatch({ type: 'objects/loadSucceeded', id, result })
       } catch (error) {
-        setState((current) => ({
-          ...current,
-          loadingObjectBucketIds: current.loadingObjectBucketIds.filter((item) => item !== id),
-          errorsByNodeId: { ...current.errorsByNodeId, [id]: errorMessage(error, 'Unable to list objects') },
-        }))
+        dispatch({ type: 'objects/loadFailed', id, message: errorMessage(error, 'Unable to list objects') })
       }
     },
-    [setState],
+    [],
   )
 
   const loadObjectMetadata = useCallback(
@@ -117,30 +70,16 @@ export function App() {
         return
       }
 
-      setState((current) => ({
-        ...current,
-        loadingObjectMetadataIds: current.loadingObjectMetadataIds.includes(id)
-          ? current.loadingObjectMetadataIds
-          : [...current.loadingObjectMetadataIds, id],
-        errorsByNodeId: { ...current.errorsByNodeId, [id]: '' },
-      }))
+      dispatch({ type: 'objectMetadata/loadStarted', id })
 
       try {
         const metadata = await window.electronAPI.storage.getObjectMetadata({ connectionId, bucket, key })
-        setState((current) => ({
-          ...current,
-          objectMetadataById: { ...current.objectMetadataById, [id]: metadata },
-          loadingObjectMetadataIds: current.loadingObjectMetadataIds.filter((item) => item !== id),
-        }))
+        dispatch({ type: 'objectMetadata/loadSucceeded', id, metadata })
       } catch (error) {
-        setState((current) => ({
-          ...current,
-          loadingObjectMetadataIds: current.loadingObjectMetadataIds.filter((item) => item !== id),
-          errorsByNodeId: { ...current.errorsByNodeId, [id]: errorMessage(error, 'Unable to load object metadata') },
-        }))
+        dispatch({ type: 'objectMetadata/loadFailed', id, message: errorMessage(error, 'Unable to load object metadata') })
       }
     },
-    [setState],
+    [],
   )
 
   useEffect(() => {
@@ -148,43 +87,43 @@ export function App() {
   }, [loadConnections])
 
   const openConnectionModal = useCallback((): void => {
-    setState((current) => ({ ...current, isConnectionModalOpen: true, statusMessage: undefined }))
-  }, [setState])
+    dispatch({ type: 'connectionModal/open' })
+  }, [])
 
   const closeConnectionModal = useCallback((): void => {
-    setState((current) => ({ ...current, isConnectionModalOpen: false, statusMessage: undefined }))
-  }, [setState])
+    dispatch({ type: 'connectionModal/close' })
+  }, [])
 
   const selectConnection = useCallback(
     (connectionId: string): void => {
-      setState((current) => ({ ...current, selection: { type: 'connection', connectionId } }))
+      dispatch({ type: 'selection/changed', selection: { type: 'connection', connectionId } })
       void loadBuckets(connectionId)
     },
-    [loadBuckets, setState],
+    [loadBuckets],
   )
 
   const selectBucket = useCallback(
     (connectionId: string, bucket: string): void => {
-      setState((current) => ({ ...current, selection: { type: 'bucket', connectionId, bucket, prefix: '' } }))
+      dispatch({ type: 'selection/changed', selection: { type: 'bucket', connectionId, bucket, prefix: '' } })
       void loadObjects(connectionId, bucket)
     },
-    [loadObjects, setState],
+    [loadObjects],
   )
 
   const selectPrefix = useCallback(
     (connectionId: string, bucket: string, prefix: string): void => {
-      setState((current) => ({ ...current, selection: { type: 'bucket', connectionId, bucket, prefix } }))
+      dispatch({ type: 'selection/changed', selection: { type: 'bucket', connectionId, bucket, prefix } })
       void loadObjects(connectionId, bucket, prefix)
     },
-    [loadObjects, setState],
+    [loadObjects],
   )
 
   const selectObject = useCallback(
     (connectionId: string, bucket: string, key: string, prefix = ''): void => {
-      setState((current) => ({ ...current, selection: { type: 'object', connectionId, bucket, key, prefix } }))
+      dispatch({ type: 'selection/changed', selection: { type: 'object', connectionId, bucket, key, prefix } })
       void loadObjectMetadata(connectionId, bucket, key)
     },
-    [loadObjectMetadata, setState],
+    [loadObjectMetadata],
   )
 
   const refreshSelectedBuckets = useCallback((): void => {
@@ -212,47 +151,34 @@ export function App() {
     async (input: SaveObjectStorageConnectionInput): Promise<void> => {
       try {
         await window.electronAPI.credentials.saveConnection(input)
-        setState((current) => ({ ...current, isConnectionModalOpen: false, statusMessage: 'Connection saved' }))
+        dispatch({ type: 'connection/saveSucceeded' })
         await loadConnections()
       } catch (error) {
-        setState((current) => ({
-          ...current,
-          isConnectionModalOpen: true,
-          statusMessage: errorMessage(error, 'Unable to save connection'),
-        }))
+        dispatch({ type: 'connection/saveFailed', message: errorMessage(error, 'Unable to save connection') })
       }
     },
-    [loadConnections, setState],
+    [loadConnections],
   )
 
   const testConnectionConfig = useCallback(
     async (input: SaveObjectStorageConnectionInput): Promise<void> => {
       const validationMessage = validateConnectionTestInput(input)
       if (validationMessage) {
-        setState((current) => ({
-          ...current,
-          isConnectionModalOpen: true,
-          statusMessage: validationMessage,
-        }))
+        dispatch({ type: 'connection/testValidationFailed', message: validationMessage })
         return
       }
 
       try {
         const result = await window.electronAPI.storage.validateConnectionConfig(input)
-        setState((current) => ({
-          ...current,
-          isConnectionModalOpen: true,
-          statusMessage: result.ok ? 'Connection test succeeded' : result.message ?? 'Connection test failed',
-        }))
+        dispatch({
+          type: 'connection/testSucceeded',
+          message: result.ok ? 'Connection test succeeded' : result.message ?? 'Connection test failed',
+        })
       } catch (error) {
-        setState((current) => ({
-          ...current,
-          isConnectionModalOpen: true,
-          statusMessage: errorMessage(error, 'Connection test failed'),
-        }))
+        dispatch({ type: 'connection/testFailed', message: errorMessage(error, 'Connection test failed') })
       }
     },
-    [setState],
+    [],
   )
 
   const deleteSelectedConnection = useCallback(async (): Promise<void> => {
@@ -265,18 +191,11 @@ export function App() {
 
     try {
       await window.electronAPI.credentials.deleteConnection(connectionId)
-      setState((current) => ({
-        ...current,
-        selection: { type: 'none' },
-        bucketsByConnectionId: removeKey(current.bucketsByConnectionId, connectionId),
-        objectsByBucketId: removeKeysByPrefix(current.objectsByBucketId, `${connectionId}::`),
-        objectMetadataById: removeKeysByPrefix(current.objectMetadataById, `${connectionId}::`),
-        connections: current.connections.filter((connection) => connection.id !== connectionId),
-      }))
+      dispatch({ type: 'connection/deleteSucceeded', connectionId })
     } catch (error) {
-      setState((current) => ({ ...current, statusMessage: errorMessage(error, 'Unable to delete connection') }))
+      dispatch({ type: 'connection/deleteFailed', message: errorMessage(error, 'Unable to delete connection') })
     }
-  }, [setState])
+  }, [])
 
   return (
     <AppShell
@@ -326,12 +245,3 @@ function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback
 }
 
-function removeKey<T>(record: Record<string, T>, key: string): Record<string, T> {
-  const next = { ...record }
-  delete next[key]
-  return next
-}
-
-function removeKeysByPrefix<T>(record: Record<string, T>, prefix: string): Record<string, T> {
-  return Object.fromEntries(Object.entries(record).filter(([key]) => !key.startsWith(prefix)))
-}
