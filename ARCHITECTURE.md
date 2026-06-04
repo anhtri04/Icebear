@@ -31,7 +31,7 @@ Adapters / Engines
 
 ### Renderer
 
-The renderer owns presentation and user interaction only:
+The renderer owns presentation and user interaction only. It is mounted with `react-dom/client` from `src/main.tsx`; renderer state and side effects live in React components/hooks rather than in a manual `innerHTML` render loop.
 
 - connection forms
 - object browser
