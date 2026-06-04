@@ -4,7 +4,7 @@ import { EmptyState } from './EmptyState'
 import { Panel } from './Panel'
 import type { SaveObjectStorageConnectionInput } from '../../electron/services/credentials/credentialService'
 import type { AppState } from '../appTypes'
-import { bucketNodeId } from '../appTypes'
+import { objectListNodeId } from '../appTypes'
 import { ConnectionFormModal } from '../features/connections/ConnectionFormModal'
 import { ConnectionsSidebar } from '../features/connections/ConnectionsSidebar'
 import { formatProvider, storageProviderLabels } from '../features/connections/connectionTypes'
@@ -20,6 +20,7 @@ interface AppShellProps {
   readonly onRefreshSelectedObjects: () => void
   readonly onSelectConnection: (connectionId: string) => void
   readonly onSelectBucket: (connectionId: string, bucket: string) => void
+  readonly onSelectPrefix: (connectionId: string, bucket: string, prefix: string) => void
   readonly onSaveConnection: (input: SaveObjectStorageConnectionInput) => void
   readonly onTestConnection: (input: SaveObjectStorageConnectionInput) => void
 }
@@ -41,7 +42,14 @@ export function AppShell(props: AppShellProps) {
             onSelectConnection={props.onSelectConnection}
             onSelectBucket={props.onSelectBucket}
           />
-          <MainView state={state} onOpenConnectionModal={props.onOpenConnectionModal} onRefreshSelectedBuckets={props.onRefreshSelectedBuckets} onRefreshSelectedObjects={props.onRefreshSelectedObjects} onSelectBucket={props.onSelectBucket} />
+          <MainView
+            state={state}
+            onOpenConnectionModal={props.onOpenConnectionModal}
+            onRefreshSelectedBuckets={props.onRefreshSelectedBuckets}
+            onRefreshSelectedObjects={props.onRefreshSelectedObjects}
+            onSelectBucket={props.onSelectBucket}
+            onSelectPrefix={props.onSelectPrefix}
+          />
           <aside className="min-h-0 border-l border-border bg-surface max-xl:hidden" aria-label="Options" />
         </div>
       </div>
@@ -94,9 +102,10 @@ interface MainViewProps {
   readonly onRefreshSelectedBuckets: () => void
   readonly onRefreshSelectedObjects: () => void
   readonly onSelectBucket: (connectionId: string, bucket: string) => void
+  readonly onSelectPrefix: (connectionId: string, bucket: string, prefix: string) => void
 }
 
-function MainView({ state, onOpenConnectionModal, onRefreshSelectedBuckets, onRefreshSelectedObjects, onSelectBucket }: MainViewProps) {
+function MainView({ state, onOpenConnectionModal, onRefreshSelectedBuckets, onRefreshSelectedObjects, onSelectBucket, onSelectPrefix }: MainViewProps) {
   const { selection } = state
 
   if (selection.type === 'connection') {
@@ -107,15 +116,18 @@ function MainView({ state, onOpenConnectionModal, onRefreshSelectedBuckets, onRe
   }
 
   if (selection.type === 'bucket') {
-    const id = bucketNodeId(selection.connectionId, selection.bucket)
+    const prefix = selection.prefix ?? ''
+    const id = objectListNodeId(selection.connectionId, selection.bucket, prefix)
     return (
       <main className="min-h-0 overflow-auto bg-canvas p-6">
         <BucketView
           bucket={selection.bucket}
+          prefix={prefix}
           result={state.objectsByBucketId[id]}
           isLoading={state.loadingObjectBucketIds.includes(id)}
           error={state.errorsByNodeId[id]}
           onRefreshObjects={onRefreshSelectedObjects}
+          onOpenPrefix={(nextPrefix) => onSelectPrefix(selection.connectionId, selection.bucket, nextPrefix)}
         />
       </main>
     )
@@ -250,7 +262,8 @@ function resolveContextLabel(state: AppState): string {
 
   if (selection.type === 'bucket') {
     const connection = state.connections.find((item) => item.id === selection.connectionId)
-    return `${connection?.name ?? 'Connection'} / ${selection.bucket}`
+    const prefix = selection.prefix ? ` / ${selection.prefix}` : ''
+    return `${connection?.name ?? 'Connection'} / ${selection.bucket}${prefix}`
   }
 
   return 'No connection selected'

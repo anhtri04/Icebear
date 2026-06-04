@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppShell } from './components/AppShell'
 import type { SaveObjectStorageConnectionInput } from '../electron/services/credentials/credentialService'
 import type { AppState } from './appTypes'
-import { bucketNodeId } from './appTypes'
+import { objectListNodeId } from './appTypes'
 
 const initialState: AppState = {
   connections: [],
@@ -76,8 +76,8 @@ export function App() {
   )
 
   const loadObjects = useCallback(
-    async (connectionId: string, bucket: string): Promise<void> => {
-      const id = bucketNodeId(connectionId, bucket)
+    async (connectionId: string, bucket: string, prefix = ''): Promise<void> => {
+      const id = objectListNodeId(connectionId, bucket, prefix)
 
       if (stateRef.current.loadingObjectBucketIds.includes(id)) {
         return
@@ -90,7 +90,7 @@ export function App() {
       }))
 
       try {
-        const result = await window.electronAPI.storage.listObjects({ connectionId, bucket })
+        const result = await window.electronAPI.storage.listObjects({ connectionId, bucket, prefix })
         setState((current) => ({
           ...current,
           objectsByBucketId: { ...current.objectsByBucketId, [id]: result },
@@ -129,8 +129,16 @@ export function App() {
 
   const selectBucket = useCallback(
     (connectionId: string, bucket: string): void => {
-      setState((current) => ({ ...current, selection: { type: 'bucket', connectionId, bucket } }))
+      setState((current) => ({ ...current, selection: { type: 'bucket', connectionId, bucket, prefix: '' } }))
       void loadObjects(connectionId, bucket)
+    },
+    [loadObjects, setState],
+  )
+
+  const selectPrefix = useCallback(
+    (connectionId: string, bucket: string, prefix: string): void => {
+      setState((current) => ({ ...current, selection: { type: 'bucket', connectionId, bucket, prefix } }))
+      void loadObjects(connectionId, bucket, prefix)
     },
     [loadObjects, setState],
   )
@@ -145,7 +153,7 @@ export function App() {
   const refreshSelectedObjects = useCallback((): void => {
     const { selection } = stateRef.current
     if (selection.type === 'bucket') {
-      void loadObjects(selection.connectionId, selection.bucket)
+      void loadObjects(selection.connectionId, selection.bucket, selection.prefix ?? '')
     }
   }, [loadObjects])
 
@@ -229,6 +237,7 @@ export function App() {
       onRefreshSelectedObjects={refreshSelectedObjects}
       onSelectConnection={selectConnection}
       onSelectBucket={selectBucket}
+      onSelectPrefix={selectPrefix}
       onSaveConnection={(input) => void saveConnection(input)}
       onTestConnection={(input) => void testConnectionConfig(input)}
     />

@@ -4,7 +4,7 @@ import type { ListObjectsResult, StorageBucket } from '../electron/services/stor
 export type Selection =
   | { readonly type: 'none' }
   | { readonly type: 'connection'; readonly connectionId: string }
-  | { readonly type: 'bucket'; readonly connectionId: string; readonly bucket: string }
+  | { readonly type: 'bucket'; readonly connectionId: string; readonly bucket: string; readonly prefix?: string }
 
 export interface AppState {
   readonly connections: RedactedObjectStorageConnection[]
@@ -20,5 +20,9 @@ export interface AppState {
 }
 
 export function bucketNodeId(connectionId: string, bucket: string): string {
-  return `${connectionId}::${bucket}`
+  return objectListNodeId(connectionId, bucket)
+}
+
+export function objectListNodeId(connectionId: string, bucket: string, prefix = ''): string {
+  return `${connectionId}::${bucket}::${prefix}`
 }

@@ -2,9 +2,11 @@ import type { ListObjectsResult } from '../../../electron/services/storage/stora
 
 interface ObjectTableProps {
   readonly result?: ListObjectsResult
+  readonly currentPrefix: string
+  readonly onOpenPrefix: (prefix: string) => void
 }
 
-export function ObjectTable({ result }: ObjectTableProps) {
+export function ObjectTable({ result, currentPrefix, onOpenPrefix }: ObjectTableProps) {
   const prefixes = result?.prefixes ?? []
   const objects = result?.objects ?? []
 
@@ -28,12 +30,19 @@ export function ObjectTable({ result }: ObjectTableProps) {
       </thead>
       <tbody>
         {prefixes.map((prefix) => (
-          <Row key={`prefix-${prefix}`} name={prefix} type="Prefix" size="—" lastModified="—" />
+          <Row
+            key={`prefix-${prefix}`}
+            name={formatPrefixName(prefix, currentPrefix)}
+            type="Prefix"
+            size="—"
+            lastModified="—"
+            onOpen={() => onOpenPrefix(prefix)}
+          />
         ))}
         {objects.map((object) => (
           <Row
             key={`object-${object.key}`}
-            name={object.key}
+            name={formatObjectName(object.key, currentPrefix)}
             type="Object"
             size={object.size === undefined ? '—' : `${object.size.toLocaleString()} B`}
             lastModified={object.lastModified ?? '—'}
@@ -49,15 +58,41 @@ interface RowProps {
   readonly type: string
   readonly size: string
   readonly lastModified: string
+  readonly onOpen?: () => void
 }
 
-function Row({ name, type, size, lastModified }: RowProps) {
+function Row({ name, type, size, lastModified, onOpen }: RowProps) {
+  const nameContent = onOpen ? (
+    <button className="max-w-full truncate text-left font-medium text-primary hover:text-primary-hover" type="button" onClick={onOpen}>
+      <span className="mr-2" aria-hidden="true">
+        ▸
+      </span>
+      {name}
+    </button>
+  ) : (
+    <span>{name}</span>
+  )
+
   return (
     <tr className="border-t border-border">
-      <td className="max-w-xl truncate py-3 text-ink">{name}</td>
+      <td className="max-w-xl truncate py-3 text-ink">{nameContent}</td>
       <td className="py-3 text-ink-muted">{type}</td>
       <td className="py-3 text-ink-muted">{size}</td>
       <td className="py-3 text-ink-muted">{lastModified}</td>
     </tr>
   )
+}
+
+function formatPrefixName(prefix: string, currentPrefix: string): string {
+  const relative = stripCurrentPrefix(prefix, currentPrefix)
+  return relative || prefix
+}
+
+function formatObjectName(key: string, currentPrefix: string): string {
+  const relative = stripCurrentPrefix(key, currentPrefix)
+  return relative || key
+}
+
+function stripCurrentPrefix(value: string, currentPrefix: string): string {
+  return currentPrefix && value.startsWith(currentPrefix) ? value.slice(currentPrefix.length) : value
 }
