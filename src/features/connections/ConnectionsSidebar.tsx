@@ -1,7 +1,14 @@
+import type { AppState } from '../../appTypes'
 import { ConnectionsToolbar } from './ConnectionsToolbar'
 import { ConnectionTree } from './ConnectionTree'
 
-export function ConnectionsSidebar(): string {
+interface ConnectionsSidebarProps {
+  readonly state: AppState
+}
+
+export function ConnectionsSidebar({ state }: ConnectionsSidebarProps): string {
+  const canRemove = state.selection.type === 'connection' || state.selection.type === 'bucket'
+
   return `
     <aside class="flex min-h-0 flex-col border-r border-border bg-surface-raised">
       <div class="border-b border-border p-4">
@@ -10,7 +17,7 @@ export function ConnectionsSidebar(): string {
             <h2 class="m-0 text-sm font-semibold uppercase tracking-[0.12em] text-ink-muted">Connections</h2>
             <p class="m-0 mt-1 text-xs text-ink-subtle">Saved object storage profiles</p>
           </div>
-          ${ConnectionsToolbar()}
+          ${ConnectionsToolbar({ canRemove })}
         </div>
 
         <label class="block">
@@ -24,7 +31,7 @@ export function ConnectionsSidebar(): string {
       </div>
 
       <nav class="min-h-0 flex-1 overflow-auto p-3" aria-label="Connection tree">
-        ${ConnectionTree({ nodes: [] })}
+        ${ConnectionTree({ state })}
       </nav>
     </aside>
   `
