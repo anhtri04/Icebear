@@ -4,14 +4,32 @@ import { ConnectionTreeItem } from './ConnectionTreeItem'
 
 interface ConnectionTreeProps {
   readonly state: AppState
+  readonly filterText?: string
+  readonly hasUnfilteredConnections?: boolean
   readonly onOpenConnectionModal: () => void
   readonly onSelectConnection: (connectionId: string) => void
   readonly onSelectBucket: (connectionId: string, bucket: string) => void
 }
 
-export function ConnectionTree({ state, onOpenConnectionModal, onSelectConnection, onSelectBucket }: ConnectionTreeProps) {
+export function ConnectionTree({
+  state,
+  filterText = '',
+  hasUnfilteredConnections = false,
+  onOpenConnectionModal,
+  onSelectConnection,
+  onSelectBucket,
+}: ConnectionTreeProps) {
   if (state.isLoadingConnections) {
     return <p className="m-0 p-3 text-sm text-ink-muted">Loading connections…</p>
+  }
+
+  if (hasUnfilteredConnections && filterText.trim() && state.connections.length === 0) {
+    return (
+      <div className="rounded-icebear-lg border border-dashed border-border bg-surface-muted p-4 text-center">
+        <p className="m-0 text-sm font-medium text-ink">No matching connections</p>
+        <p className="m-0 mt-1 text-xs leading-normal text-ink-muted">No connections or loaded buckets match “{filterText.trim()}”.</p>
+      </div>
+    )
   }
 
   if (state.connections.length === 0) {
