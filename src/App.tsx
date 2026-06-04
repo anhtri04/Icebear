@@ -2,16 +2,18 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppShell } from './components/AppShell'
 import type { SaveObjectStorageConnectionInput } from '../electron/services/credentials/credentialService'
 import type { AppState } from './appTypes'
-import { objectListNodeId } from './appTypes'
+import { objectListNodeId, objectNodeId } from './appTypes'
 
 const initialState: AppState = {
   connections: [],
   bucketsByConnectionId: {},
   objectsByBucketId: {},
+  objectMetadataById: {},
   selection: { type: 'none' },
   isLoadingConnections: true,
   loadingBucketConnectionIds: [],
   loadingObjectBucketIds: [],
+  loadingObjectMetadataIds: [],
   errorsByNodeId: {},
   isConnectionModalOpen: false,
 }
@@ -107,6 +109,40 @@ export function App() {
     [setState],
   )
 
+  const loadObjectMetadata = useCallback(
+    async (connectionId: string, bucket: string, key: string): Promise<void> => {
+      const id = objectNodeId(connectionId, bucket, key)
+
+      if (stateRef.current.loadingObjectMetadataIds.includes(id)) {
+        return
+      }
+
+      setState((current) => ({
+        ...current,
+        loadingObjectMetadataIds: current.loadingObjectMetadataIds.includes(id)
+          ? current.loadingObjectMetadataIds
+          : [...current.loadingObjectMetadataIds, id],
+        errorsByNodeId: { ...current.errorsByNodeId, [id]: '' },
+      }))
+
+      try {
+        const metadata = await window.electronAPI.storage.getObjectMetadata({ connectionId, bucket, key })
+        setState((current) => ({
+          ...current,
+          objectMetadataById: { ...current.objectMetadataById, [id]: metadata },
+          loadingObjectMetadataIds: current.loadingObjectMetadataIds.filter((item) => item !== id),
+        }))
+      } catch (error) {
+        setState((current) => ({
+          ...current,
+          loadingObjectMetadataIds: current.loadingObjectMetadataIds.filter((item) => item !== id),
+          errorsByNodeId: { ...current.errorsByNodeId, [id]: errorMessage(error, 'Unable to load object metadata') },
+        }))
+      }
+    },
+    [setState],
+  )
+
   useEffect(() => {
     void loadConnections()
   }, [loadConnections])
@@ -143,6 +179,14 @@ export function App() {
     [loadObjects, setState],
   )
 
+  const selectObject = useCallback(
+    (connectionId: string, bucket: string, key: string, prefix = ''): void => {
+      setState((current) => ({ ...current, selection: { type: 'object', connectionId, bucket, key, prefix } }))
+      void loadObjectMetadata(connectionId, bucket, key)
+    },
+    [loadObjectMetadata, setState],
+  )
+
   const refreshSelectedBuckets = useCallback((): void => {
     const { selection } = stateRef.current
     if (selection.type === 'connection') {
@@ -156,6 +200,13 @@ export function App() {
       void loadObjects(selection.connectionId, selection.bucket, selection.prefix ?? '')
     }
   }, [loadObjects])
+
+  const refreshSelectedObjectMetadata = useCallback((): void => {
+    const { selection } = stateRef.current
+    if (selection.type === 'object') {
+      void loadObjectMetadata(selection.connectionId, selection.bucket, selection.key)
+    }
+  }, [loadObjectMetadata])
 
   const saveConnection = useCallback(
     async (input: SaveObjectStorageConnectionInput): Promise<void> => {
@@ -219,6 +270,7 @@ export function App() {
         selection: { type: 'none' },
         bucketsByConnectionId: removeKey(current.bucketsByConnectionId, connectionId),
         objectsByBucketId: removeKeysByPrefix(current.objectsByBucketId, `${connectionId}::`),
+        objectMetadataById: removeKeysByPrefix(current.objectMetadataById, `${connectionId}::`),
         connections: current.connections.filter((connection) => connection.id !== connectionId),
       }))
     } catch (error) {
@@ -235,9 +287,11 @@ export function App() {
       onDeleteSelectedConnection={() => void deleteSelectedConnection()}
       onRefreshSelectedBuckets={refreshSelectedBuckets}
       onRefreshSelectedObjects={refreshSelectedObjects}
+      onRefreshSelectedObjectMetadata={refreshSelectedObjectMetadata}
       onSelectConnection={selectConnection}
       onSelectBucket={selectBucket}
       onSelectPrefix={selectPrefix}
+      onSelectObject={selectObject}
       onSaveConnection={(input) => void saveConnection(input)}
       onTestConnection={(input) => void testConnectionConfig(input)}
     />

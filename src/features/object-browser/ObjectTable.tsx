@@ -4,9 +4,10 @@ interface ObjectTableProps {
   readonly result?: ListObjectsResult
   readonly currentPrefix: string
   readonly onOpenPrefix: (prefix: string) => void
+  readonly onSelectObject: (key: string) => void
 }
 
-export function ObjectTable({ result, currentPrefix, onOpenPrefix }: ObjectTableProps) {
+export function ObjectTable({ result, currentPrefix, onOpenPrefix, onSelectObject }: ObjectTableProps) {
   const prefixes = result?.prefixes ?? []
   const objects = result?.objects ?? []
 
@@ -46,6 +47,7 @@ export function ObjectTable({ result, currentPrefix, onOpenPrefix }: ObjectTable
             type="Object"
             size={object.size === undefined ? '—' : `${object.size.toLocaleString()} B`}
             lastModified={object.lastModified ?? '—'}
+            onOpen={() => onSelectObject(object.key)}
           />
         ))}
       </tbody>
@@ -65,7 +67,7 @@ function Row({ name, type, size, lastModified, onOpen }: RowProps) {
   const nameContent = onOpen ? (
     <button className="max-w-full truncate text-left font-medium text-primary hover:text-primary-hover" type="button" onClick={onOpen}>
       <span className="mr-2" aria-hidden="true">
-        ▸
+        {type === 'Prefix' ? '▸' : '◻'}
       </span>
       {name}
     </button>

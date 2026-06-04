@@ -19,7 +19,7 @@ export function ConnectionsSidebar({
   onSelectConnection,
   onSelectBucket,
 }: ConnectionsSidebarProps) {
-  const canRemove = state.selection.type === 'connection' || state.selection.type === 'bucket'
+  const canRemove = state.selection.type === 'connection' || state.selection.type === 'bucket' || state.selection.type === 'object'
 
   return (
     <aside className="flex min-h-0 flex-col border-r border-border bg-surface-raised">

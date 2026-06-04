@@ -11,9 +11,10 @@ interface BucketViewProps {
   readonly error?: string
   readonly onRefreshObjects: () => void
   readonly onOpenPrefix: (prefix: string) => void
+  readonly onSelectObject: (key: string) => void
 }
 
-export function BucketView({ bucket, prefix, result, isLoading, error, onRefreshObjects, onOpenPrefix }: BucketViewProps) {
+export function BucketView({ bucket, prefix, result, isLoading, error, onRefreshObjects, onOpenPrefix, onSelectObject }: BucketViewProps) {
   const parentPrefix = getParentPrefix(prefix)
 
   return (
@@ -31,7 +32,9 @@ export function BucketView({ bucket, prefix, result, isLoading, error, onRefresh
       </div>
       {isLoading ? <p className="rounded-icebear-lg bg-primary-soft p-4 text-sm text-primary">Loading objects…</p> : null}
       {error ? <p className="rounded-icebear-lg bg-danger-soft p-4 text-sm text-danger">{error}</p> : null}
-      {!isLoading && !error ? <ObjectTable currentPrefix={prefix} result={result} onOpenPrefix={onOpenPrefix} /> : null}
+      {!isLoading && !error ? (
+        <ObjectTable currentPrefix={prefix} result={result} onOpenPrefix={onOpenPrefix} onSelectObject={onSelectObject} />
+      ) : null}
     </Panel>
   )
 }
