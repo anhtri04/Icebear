@@ -1,8 +1,6 @@
 import { ipcMain } from 'electron'
-import {
-  credentialService,
-  type SaveObjectStorageConnectionInput,
-} from '../services/credentials/credentialService'
+import type { SaveObjectStorageConnectionInput } from '../../shared/credentialTypes'
+import { credentialService } from '../services/credentials/credentialService'
 
 export function registerCredentialIpcHandlers(): void {
   ipcMain.handle('credentials:listConnections', () => {

@@ -1,6 +1,6 @@
 import type { FormEvent } from 'react'
-import type { SaveObjectStorageConnectionInput } from '../../../electron/services/credentials/credentialService'
-import type { S3Provider } from '../../../electron/services/storage/s3Client'
+import type { SaveObjectStorageConnectionInput } from '../../../shared/credentialTypes'
+import type { ObjectStorageProvider } from '../../../shared/storageTypes'
 import { objectStorageProviders, formatProvider } from './connectionTypes'
 
 interface ConnectionFormModalProps {
@@ -125,7 +125,7 @@ function Field({ label, name, placeholder, type = 'text', required = false }: Fi
 
 function formToConnectionInput(form: HTMLFormElement): SaveObjectStorageConnectionInput {
   const data = new FormData(form)
-  const provider = String(data.get('provider') ?? 'aws') as S3Provider
+  const provider = String(data.get('provider') ?? 'aws') as ObjectStorageProvider
 
   return {
     name: String(data.get('name') ?? '').trim(),

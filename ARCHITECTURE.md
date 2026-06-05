@@ -21,6 +21,8 @@ Connect -> Browse -> Detect Dataset -> Infer Schema -> Preview -> Query -> Analy
 ```text
 React Renderer
   -> typed preload API
+Shared serializable contracts
+  -> credential and storage DTO/input/result types
 Electron Main Process
   -> IPC handlers
 Application Services
@@ -40,7 +42,7 @@ The renderer owns presentation and user interaction only. It is mounted with `re
 - SQL editor / visual query builder
 - query results and progress states
 
-The renderer must not directly access credentials, Node APIs, the AWS SDK, DuckDB, or local filesystem paths.
+The renderer must not directly access credentials, Node APIs, the AWS SDK, DuckDB, local filesystem paths, or privileged main-process service modules. Renderer-visible IPC contracts live under `shared/` and must remain serializable.
 
 ### Preload
 
@@ -102,7 +104,7 @@ Responsibilities:
 - inspect object metadata
 - create object streams or ranged reads
 
-The storage service uses AWS SDK v3 behind provider-neutral Icebear types. S3-compatible provider details should remain contained inside this service boundary.
+The storage service uses AWS SDK v3 behind provider-neutral Icebear contracts from `shared/storageTypes.ts`. S3-compatible provider details should remain contained inside this service boundary.
 
 ### Dataset service
 
@@ -165,4 +167,4 @@ IPC handlers should be small adapters that validate inputs, call services, and r
 
 ## Current scaffold
 
-The current implementation establishes the folders, typed service boundaries, and IPC channel names needed for the first prototype. Storage connectivity is implemented through AWS SDK v3 for S3-compatible APIs. Real file parsing, DuckDB integration, caching, and credential storage should be implemented within these boundaries.
+The current implementation establishes the folders, typed service boundaries, shared serializable contracts, and IPC channel names needed for the first prototype. Storage connectivity is implemented through AWS SDK v3 for S3-compatible APIs. Real file parsing, DuckDB integration, caching, and credential storage should be implemented within these boundaries.

@@ -5,58 +5,19 @@ import {
   S3ServiceException,
 } from '@aws-sdk/client-s3'
 import { credentialService, type CredentialService } from '../credentials/credentialService'
-import { createS3Client, type S3ConnectionConfig } from './s3Client'
-
-export interface StorageBucket {
-  readonly name: string
-  readonly createdAt?: string
-}
-
-export interface StorageObject {
-  readonly bucket: string
-  readonly key: string
-  readonly size?: number
-  readonly contentType?: string
-  readonly lastModified?: string
-  readonly etag?: string
-}
-
-export interface ConnectionIdInput {
-  readonly connectionId: string
-}
-
-export interface ValidateConnectionInput extends ConnectionIdInput {}
-
-export type ValidateConnectionConfigInput = S3ConnectionConfig
-
-export interface ListBucketsInput extends ConnectionIdInput {}
-
-export interface ListObjectsInput extends ConnectionIdInput {
-  readonly bucket: string
-  readonly prefix?: string
-  readonly continuationToken?: string
-  readonly maxKeys?: number
-}
-
-export interface ListObjectsResult {
-  readonly objects: StorageObject[]
-  readonly prefixes: string[]
-  readonly continuationToken?: string
-}
-
-export interface GetObjectMetadataInput extends ConnectionIdInput {
-  readonly bucket: string
-  readonly key: string
-}
-
-export interface ObjectMetadata extends StorageObject {
-  readonly metadata: Record<string, string>
-}
-
-export interface ValidateConnectionResult {
-  readonly ok: boolean
-  readonly message?: string
-}
+import { createS3Client } from './s3Client'
+import type {
+  GetObjectMetadataInput,
+  ListBucketsInput,
+  ListObjectsInput,
+  ListObjectsResult,
+  ObjectMetadata,
+  S3ConnectionConfig,
+  StorageBucket,
+  ValidateConnectionConfigInput,
+  ValidateConnectionInput,
+  ValidateConnectionResult,
+} from '../../../shared/storageTypes'
 
 type ConnectionResolver = Pick<CredentialService, 'resolveConnection'>
 

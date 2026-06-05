@@ -2,35 +2,12 @@ import { app } from 'electron'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
-import type { S3ConnectionConfig, S3Provider } from '../storage/s3Client'
-
-export type ObjectStorageProvider = S3Provider
-
-export interface ObjectStorageConnection extends S3ConnectionConfig {
-  readonly id: string
-  readonly name: string
-  readonly createdAt: string
-  readonly updatedAt: string
-}
-
-export interface RedactedObjectStorageConnection {
-  readonly id: string
-  readonly name: string
-  readonly provider: ObjectStorageProvider
-  readonly region?: string
-  readonly endpoint?: string
-  readonly accessKeyId?: string
-  readonly hasSecretAccessKey: boolean
-  readonly hasSessionToken: boolean
-  readonly forcePathStyle?: boolean
-  readonly createdAt: string
-  readonly updatedAt: string
-}
-
-export interface SaveObjectStorageConnectionInput extends S3ConnectionConfig {
-  readonly id?: string
-  readonly name: string
-}
+import type {
+  ObjectStorageConnection,
+  RedactedObjectStorageConnection,
+  SaveObjectStorageConnectionInput,
+} from '../../../shared/credentialTypes'
+import type { ObjectStorageProvider } from '../../../shared/storageTypes'
 
 interface CredentialStoreFile {
   readonly connections: ObjectStorageConnection[]

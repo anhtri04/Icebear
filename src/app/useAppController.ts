@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react'
-import type { SaveObjectStorageConnectionInput } from '../../electron/services/credentials/credentialService'
+import type { SaveObjectStorageConnectionInput } from '../../shared/credentialTypes'
 import { objectListNodeId, objectNodeId } from '../appTypes'
 import { validateConnectionTestInput } from '../features/connections/connectionValidation'
 import { appReducer } from './appReducer'

@@ -1,4 +1,4 @@
-import type { ListObjectsResult } from '../../../electron/services/storage/storageService'
+import type { ListObjectsResult } from '../../../shared/storageTypes'
 import { Button } from '../../components/Button'
 import { Panel } from '../../components/Panel'
 import { ObjectTable } from './ObjectTable'

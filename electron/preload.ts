@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type {
   RedactedObjectStorageConnection,
   SaveObjectStorageConnectionInput,
-} from './services/credentials/credentialService'
+} from '../shared/credentialTypes'
 import type { DetectDatasetFormatInput, DatasetFormat } from './services/dataset/detectFormat'
 import type { DatasetSchema, InferSchemaInput } from './services/dataset/inferSchema'
 import type { DatasetPreview, PreviewDatasetInput } from './services/dataset/previewDataset'
@@ -17,7 +17,7 @@ import type {
   ValidateConnectionConfigInput,
   ValidateConnectionInput,
   ValidateConnectionResult,
-} from './services/storage/storageService'
+} from '../shared/storageTypes'
 
 const electronAPI = {
   ping: (): Promise<string> => ipcRenderer.invoke('app:ping'),

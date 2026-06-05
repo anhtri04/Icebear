@@ -1,6 +1,6 @@
 import { Badge } from '../../components/Badge'
-import type { RedactedObjectStorageConnection } from '../../../electron/services/credentials/credentialService'
-import type { StorageBucket } from '../../../electron/services/storage/storageService'
+import type { RedactedObjectStorageConnection } from '../../../shared/credentialTypes'
+import type { StorageBucket } from '../../../shared/storageTypes'
 import type { Selection } from '../../appTypes'
 import { formatProvider } from './connectionTypes'
 

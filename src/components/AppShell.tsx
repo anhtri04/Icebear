@@ -1,4 +1,4 @@
-import type { SaveObjectStorageConnectionInput } from '../../electron/services/credentials/credentialService'
+import type { SaveObjectStorageConnectionInput } from '../../shared/credentialTypes'
 import type { AppState } from '../appTypes'
 import { ConnectionFormModal } from '../features/connections/ConnectionFormModal'
 import { ConnectionsSidebar } from '../features/connections/ConnectionsSidebar'

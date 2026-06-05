@@ -1,4 +1,4 @@
-import type { SaveObjectStorageConnectionInput } from '../../../electron/services/credentials/credentialService'
+import type { SaveObjectStorageConnectionInput } from '../../../shared/credentialTypes'
 
 export function validateConnectionTestInput(input: SaveObjectStorageConnectionInput): string | undefined {
   if (!input.name.trim()) {

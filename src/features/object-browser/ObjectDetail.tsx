@@ -1,4 +1,4 @@
-import type { ObjectMetadata } from '../../../electron/services/storage/storageService'
+import type { ObjectMetadata } from '../../../shared/storageTypes'
 import { Button } from '../../components/Button'
 import { Panel } from '../../components/Panel'
 

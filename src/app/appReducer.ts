@@ -1,5 +1,5 @@
-import type { RedactedObjectStorageConnection } from '../../electron/services/credentials/credentialService'
-import type { ListObjectsResult, ObjectMetadata, StorageBucket } from '../../electron/services/storage/storageService'
+import type { RedactedObjectStorageConnection } from '../../shared/credentialTypes'
+import type { ListObjectsResult, ObjectMetadata, StorageBucket } from '../../shared/storageTypes'
 import type { AppState, Selection } from '../appTypes'
 
 export type AppAction =

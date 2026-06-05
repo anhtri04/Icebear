@@ -1,4 +1,4 @@
-import type { ListObjectsResult } from '../../../electron/services/storage/storageService'
+import type { ListObjectsResult } from '../../../shared/storageTypes'
 
 interface ObjectTableProps {
   readonly result?: ListObjectsResult

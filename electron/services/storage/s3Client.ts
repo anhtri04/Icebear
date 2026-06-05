@@ -1,16 +1,5 @@
 import { S3Client, type S3ClientConfig } from '@aws-sdk/client-s3'
-
-export type S3Provider = 'aws' | 'r2' | 'minio' | 's3-compatible'
-
-export interface S3ConnectionConfig {
-  readonly provider: S3Provider
-  readonly region?: string
-  readonly endpoint?: string
-  readonly accessKeyId?: string
-  readonly secretAccessKey?: string
-  readonly sessionToken?: string
-  readonly forcePathStyle?: boolean
-}
+import type { S3ConnectionConfig } from '../../../shared/storageTypes'
 
 export function createS3Client(config: S3ConnectionConfig): S3Client {
   validateS3ConnectionConfig(config)

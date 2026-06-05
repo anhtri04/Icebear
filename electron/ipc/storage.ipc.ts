@@ -1,12 +1,12 @@
 import { ipcMain } from 'electron'
-import {
-  storageService,
-  type GetObjectMetadataInput,
-  type ListBucketsInput,
-  type ListObjectsInput,
-  type ValidateConnectionConfigInput,
-  type ValidateConnectionInput,
-} from '../services/storage/storageService'
+import type {
+  GetObjectMetadataInput,
+  ListBucketsInput,
+  ListObjectsInput,
+  ValidateConnectionConfigInput,
+  ValidateConnectionInput,
+} from '../../shared/storageTypes'
+import { storageService } from '../services/storage/storageService'
 
 export function registerStorageIpcHandlers(): void {
   ipcMain.handle('storage:validateConnection', (_event, input: ValidateConnectionInput) => {
